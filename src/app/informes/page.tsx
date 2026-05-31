@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, Download, BarChart3, Leaf, MapPin, Filter } from 'lucide-react'
 import { loadTrials, exportTrialsJSON, importTrialsJSON } from '@/lib/storage'
+import { loadPhotosByTrial } from '@/lib/photo-storage'
 import type { Trial } from '@/lib/types'
 import Link from 'next/link'
 
@@ -48,12 +49,14 @@ export default function InformesPage() {
     const evalFirst = trial.evaluaciones[0]
     if (!varMain || !evalFirst) { alert('El ensayo no tiene variables principales o evaluaciones configuradas.'); return }
     const result = runAnalysis(trial, varMain.id, evalFirst.id, 'tukey')
+    const photos = loadPhotosByTrial(trial.id)
     await generatePDFReport({
       trial,
       analysis: result,
       variableName: varMain.nombre,
       includeCharts: true,
       includeEconomicAnalysis: true,
+      photos,
       firmante: trial.ubicacion.responsable,
       cargo: 'Responsable Técnico',
     })

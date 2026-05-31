@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { MapPin, Calendar, FlaskConical, BarChart3, Edit3, ArrowLeft, Leaf, Droplets, Ruler, ChevronRight } from 'lucide-react'
+import { MapPin, Calendar, FlaskConical, BarChart3, Edit3, ArrowLeft, Leaf, Droplets, Ruler, ChevronRight, Camera } from 'lucide-react'
 import { getTrialById, saveTrial } from '@/lib/storage'
+import { loadPhotosByTrial } from '@/lib/photo-storage'
 import type { Trial, TrialStatus } from '@/lib/types'
 
 const STATUS_FLOW: TrialStatus[] = ['configuracion', 'activo', 'cosecha', 'analisis', 'completado']
@@ -27,6 +28,7 @@ export default function TrialDetailPage() {
   const obsCount = trial.observaciones.length
   const treatCount = trial.tratamientos.length
   const evalCount = trial.evaluaciones.length
+  const photoCount = typeof window !== 'undefined' ? loadPhotosByTrial(trial.id).length : 0
 
   const advanceStatus = () => {
     const idx = STATUS_FLOW.indexOf(trial.estado)
@@ -75,11 +77,12 @@ export default function TrialDetailPage() {
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
           { href: `/ensayos/${id}/datos`, label: 'Ingresar Datos', icon: Edit3, desc: `${obsCount} observaciones registradas`, color: 'bg-lq-primary hover:bg-lq-primary-light text-white' },
+          { href: `/ensayos/${id}/fotos`, label: 'Fotografías', icon: Camera, desc: `${photoCount} foto(s) — antes/durante/después`, color: 'bg-blue-700 hover:bg-blue-800 text-white' },
           { href: `/ensayos/${id}/analisis`, label: 'Análisis Estadístico', icon: BarChart3, desc: 'ANOVA, Tukey, LSD, Comparación de medias', color: 'bg-lq-secondary hover:bg-green-600 text-white' },
-          { href: `/informes`, label: 'Generar Informe PDF', icon: FlaskConical, desc: 'Reporte técnico completo', color: 'bg-lq-accent hover:opacity-90 text-lq-primary font-bold' },
+          { href: `/informes`, label: 'Generar Informe PDF', icon: FlaskConical, desc: 'Reporte técnico con fotos', color: 'bg-lq-accent hover:opacity-90 text-lq-primary font-bold' },
         ].map(a => (
           <Link key={a.href} href={a.href} className={`p-5 rounded-xl flex items-center gap-4 shadow-sm transition ${a.color}`}>
             <a.icon size={28} />

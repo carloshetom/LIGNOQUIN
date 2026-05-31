@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, FlaskConical, PlusCircle, FileText, Home, Leaf } from 'lucide-react'
+import { BarChart3, FlaskConical, PlusCircle, FileText, Home, Leaf, Camera } from 'lucide-react'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/ensayos', label: 'Ensayos', icon: FlaskConical },
   { href: '/ensayos/nuevo', label: 'Nuevo Ensayo', icon: PlusCircle },
-  { href: '/informes', label: 'Informes', icon: FileText },
+  { href: '/informes', label: 'Informes PDF', icon: FileText },
 ]
 
 export default function Navigation() {

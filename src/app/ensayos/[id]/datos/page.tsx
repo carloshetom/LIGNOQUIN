@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, CheckCircle, AlertCircle, BarChart3 } from 'lucide-react'
+import { ArrowLeft, Save, CheckCircle, AlertCircle, BarChart3, Camera, Image as ImageIcon } from 'lucide-react'
 import { getTrialById, saveTrial } from '@/lib/storage'
-import type { Trial, Observation, Variable, Evaluation, Treatment } from '@/lib/types'
+import { loadPhotosByEval, savePhoto, buildPhotoRecord } from '@/lib/photo-storage'
+import type { Trial, Observation, PhotoRecord } from '@/lib/types'
 import { v4 as uuid } from 'uuid'
 
 export default function DataEntryPage() {
@@ -16,14 +17,37 @@ export default function DataEntryPage() {
   const [selectedVar, setSelectedVar] = useState<string>('')
   const [pending, setPending] = useState<Record<string, string>>({}) // key: `${treatId}_${rep}` => value
   const [saved, setSaved] = useState(false)
+  const [evalPhotos, setEvalPhotos] = useState<PhotoRecord[]>([])
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     const t = getTrialById(id)
     if (!t) { router.push('/ensayos'); return }
     setTrial(t)
-    setSelectedEval(t.evaluaciones[0]?.id ?? '')
+    const firstEval = t.evaluaciones[0]?.id ?? ''
+    setSelectedEval(firstEval)
     setSelectedVar(t.variables.find(v => v.esPrincipal)?.id ?? t.variables[0]?.id ?? '')
+    if (firstEval) setEvalPhotos(loadPhotosByEval(t.id, firstEval))
   }, [id])
+
+  // Reload photos when eval changes
+  useEffect(() => {
+    if (trial && selectedEval) setEvalPhotos(loadPhotosByEval(trial.id, selectedEval))
+  }, [selectedEval, trial?.id])
+
+  async function handleQuickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (!files.length || !trial) return
+    setUploadingPhoto(true)
+    for (const file of files) {
+      const record = await buildPhotoRecord(file, trial.id, 'durante', `Muestreo — ${evaluation?.nombre ?? ''}`, selectedEval || undefined)
+      savePhoto(record)
+    }
+    setEvalPhotos(loadPhotosByEval(trial.id, selectedEval))
+    setUploadingPhoto(false)
+    if (photoInputRef.current) photoInputRef.current.value = ''
+  }
 
   if (!trial) return <div className="p-8 text-gray-500">Cargando...</div>
 
@@ -229,6 +253,52 @@ export default function DataEntryPage() {
         </div>
       )}
 
+      {/* ── Quick Photo Capture During Sampling ── */}
+      <div className="my-5 bg-white rounded-xl border border-lq-border shadow-sm overflow-hidden">
+        <div className="px-4 py-3 bg-blue-700 text-white flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Camera size={15} />
+            <span className="text-sm font-semibold">Fotografías de muestreo</span>
+            <span className="text-xs text-blue-200">— {evaluation?.nombre ?? 'Evaluación'}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            {evalPhotos.length > 0 && (
+              <Link href={`/ensayos/${id}/fotos`} className="text-xs text-blue-200 hover:text-white underline">
+                Ver galería completa →
+              </Link>
+            )}
+            <label className={`flex items-center gap-1.5 bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition ${uploadingPhoto ? 'opacity-50' : ''}`}>
+              <Camera size={13} />
+              {uploadingPhoto ? 'Procesando...' : 'Capturar foto(s)'}
+              <input ref={photoInputRef} type="file" accept="image/*" multiple onChange={handleQuickPhoto} disabled={uploadingPhoto} className="hidden" />
+            </label>
+          </div>
+        </div>
+
+        {evalPhotos.length === 0 ? (
+          <div className="px-4 py-6 text-center text-gray-400 text-sm">
+            <ImageIcon size={32} className="mx-auto mb-2 text-gray-200" />
+            Sin fotografías para esta evaluación. Capture imágenes del proceso de muestreo.
+          </div>
+        ) : (
+          <div className="p-3 flex gap-2 overflow-x-auto">
+            {evalPhotos.slice(0, 8).map(p => (
+              <div key={p.id} className="flex-shrink-0 relative group">
+                <img src={p.base64} alt={p.descripcion} className="h-20 w-28 object-cover rounded-lg border border-lq-border" />
+                <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-1 py-0.5 rounded-b-lg truncate opacity-0 group-hover:opacity-100 transition">
+                  {p.descripcion}
+                </div>
+              </div>
+            ))}
+            {evalPhotos.length > 8 && (
+              <Link href={`/ensayos/${id}/fotos`} className="flex-shrink-0 h-20 w-28 bg-gray-100 rounded-lg border border-lq-border flex flex-col items-center justify-center text-gray-500 hover:bg-gray-200 text-xs font-medium">
+                +{evalPhotos.length - 8} más
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Actions */}
       <div className="flex items-center gap-4">
         <button
@@ -251,6 +321,9 @@ export default function DataEntryPage() {
 
         <div className="flex-1" />
 
+        <Link href={`/ensayos/${id}/fotos`} className="flex items-center gap-2 border border-blue-600 text-blue-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-50">
+          <Camera size={15} /> Galería de fotos
+        </Link>
         <Link href={`/ensayos/${id}/analisis`} className="flex items-center gap-2 border border-lq-secondary text-lq-secondary px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-green-50">
           <BarChart3 size={15} /> Ir a análisis estadístico →
         </Link>

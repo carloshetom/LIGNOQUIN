@@ -185,6 +185,48 @@ export interface StatisticalAnalysis {
   ejecutadoEn: string
 }
 
+// ─── Photo Record ─────────────────────────────────────────────────────────────
+
+export type PhotoTipo =
+  | 'instalacion'
+  | 'antes'
+  | 'durante'
+  | 'despues'
+  | 'cosecha'
+  | 'general'
+
+export const PHOTO_TIPO_LABELS: Record<PhotoTipo, string> = {
+  instalacion: 'Instalación del ensayo',
+  antes:       'Antes del tratamiento',
+  durante:     'Durante el muestreo',
+  despues:     'Después del tratamiento',
+  cosecha:     'Cosecha / Evaluación final',
+  general:     'Registro general',
+}
+
+export const PHOTO_TIPO_COLORS: Record<PhotoTipo, string> = {
+  instalacion: 'bg-blue-100 text-blue-700',
+  antes:       'bg-orange-100 text-orange-700',
+  durante:     'bg-yellow-100 text-yellow-700',
+  despues:     'bg-green-100 text-green-700',
+  cosecha:     'bg-red-100 text-red-700',
+  general:     'bg-gray-100 text-gray-600',
+}
+
+export interface PhotoRecord {
+  id: string
+  trialId: string
+  evaluacionId?: string
+  tratamientoId?: string
+  tipo: PhotoTipo
+  descripcion: string
+  base64: string
+  mimeType: string
+  nombreArchivo: string
+  fechaCaptura: string
+  creadoEn: string
+}
+
 // ─── PDF Report ──────────────────────────────────────────────────────────────
 
 export interface ReportConfig {
@@ -193,6 +235,7 @@ export interface ReportConfig {
   variableName: string
   includeCharts: boolean
   includeEconomicAnalysis: boolean
+  photos?: PhotoRecord[]
   firmante?: string
   cargo?: string
 }

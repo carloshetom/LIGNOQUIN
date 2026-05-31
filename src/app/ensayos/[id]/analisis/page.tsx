@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Download, RefreshCw, Info, TrendingUp } from 'lucide-react'
 import { getTrialById } from '@/lib/storage'
 import { runAnalysis } from '@/lib/statistics'
+import { loadPhotosByTrial } from '@/lib/photo-storage'
 import { cvCategory, SIGNIFICANCE_LABEL } from '@/lib/constants'
 import { BarWithError } from '@/components/Charts'
 import type { Trial, StatisticalAnalysis, PostHocMethod } from '@/lib/types'
@@ -54,12 +55,14 @@ export default function AnalysisPage() {
     if (!trial || !result) return
     const variable = trial.variables.find(v => v.id === selectedVar)
     const { generatePDFReport } = await import('@/lib/pdf-report')
+    const photos = loadPhotosByTrial(trial.id)
     await generatePDFReport({
       trial,
       analysis: result,
       variableName: variable?.nombre ?? selectedVar,
       includeCharts: true,
       includeEconomicAnalysis: true,
+      photos,
       firmante: trial.ubicacion.responsable,
       cargo: 'Responsable Técnico',
     })

@@ -1,4 +1,5 @@
-import type { Trial, StatisticalAnalysis, ReportConfig } from './types'
+import type { Trial, StatisticalAnalysis, ReportConfig, PhotoRecord, PhotoTipo } from './types'
+import { PHOTO_TIPO_LABELS } from './types'
 import { cvCategory } from './constants'
 
 type JsPDF = import('jspdf').jsPDF
@@ -309,7 +310,85 @@ export async function generatePDFReport(config: ReportConfig): Promise<void> {
     y += 6.5
   }
 
-  // Footer note
+  // ─── Photo Section ────────────────────────────────────────────────
+  const photos = config.photos ?? []
+  if (photos.length > 0) {
+    addPage()
+
+    setFont('bold', 13)
+    setColor(C.green)
+    addText('7. REGISTRO FOTOGRÁFICO', mx, y)
+    y += 4
+    drawRect(mx, y, pw - 2 * mx, 0.5, C.gold)
+    y += 8
+
+    const photoOrder: PhotoTipo[] = ['instalacion', 'antes', 'durante', 'despues', 'cosecha', 'general']
+    const imgW = 82
+    const imgH = 58
+    const gap = 8
+    const col2X = mx + imgW + gap
+
+    for (const tipo of photoOrder) {
+      const group = photos.filter(p => p.tipo === tipo)
+      if (!group.length) continue
+
+      // Section header for this type
+      if (y + 10 > ph - 25) addPage()
+      drawRect(mx, y, pw - 2 * mx, 8, C.cream)
+      setFont('bold', 9)
+      setColor(C.green)
+      addText(PHOTO_TIPO_LABELS[tipo].toUpperCase(), mx + 4, y + 5.5)
+      setFont('normal', 7.5)
+      setColor(C.muted)
+      addText(`${group.length} fotografía(s)`, pw - mx, y + 5.5, { align: 'right' })
+      y += 12
+
+      // 2-column layout
+      let col = 0
+      for (let i = 0; i < group.length; i++) {
+        const photo = group[i]
+        const x = col === 0 ? mx : col2X
+
+        if (y + imgH + 14 > ph - 20) addPage()
+
+        try {
+          doc.addImage(photo.base64, 'JPEG', x, y, imgW, imgH)
+        } catch {
+          // If image fails, draw placeholder
+          drawRect(x, y, imgW, imgH, [220, 220, 220] as [number, number, number])
+          setFont('italic', 8)
+          setColor(C.muted)
+          addText('[imagen no disponible]', x + imgW / 2, y + imgH / 2, { align: 'center' })
+        }
+
+        // Caption
+        const captionY = y + imgH + 3
+        setFont('bold', 6.5)
+        setColor(C.text)
+        const desc = doc.splitTextToSize(photo.descripcion, imgW - 2)
+        doc.text(desc[0] ?? '', x + 1, captionY)
+        setFont('normal', 6)
+        setColor(C.muted)
+        addText(photo.fechaCaptura, x + imgW, captionY, { align: 'right' })
+
+        col++
+        if (col === 2) {
+          col = 0
+          y += imgH + 14
+        }
+      }
+
+      // If odd number, advance row
+      if (col !== 0) {
+        y += imgH + 14
+        col = 0
+      }
+      y += 4
+    }
+  }
+
+  // ─── Final footer ──────────────────────────────────────────────────
+  // Add footer to current last page
   y = ph - 25
   drawRect(mx, y, pw - 2 * mx, 0.3, C.greenLight)
   y += 5
